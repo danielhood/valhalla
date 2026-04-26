@@ -1032,15 +1032,15 @@ static int parse_valhalla_csv_text(const char *csv_text_in, valhallaTag *out_tag
   }
   out_tag->type = csv[0];
 
-  if (strlen(c1 + 1U) == 0U || strlen(c1 + 1U) > 2U)
+  if (strlen(c1 + 1U) != 2U)
   {
     return -1;
   }
-  if (strlen(c2 + 1U) == 0U || strlen(c2 + 1U) > 2U)
+  if (strlen(c2 + 1U) != 2U)
   {
     return -1;
   }
-  if (strlen(c3 + 1U) == 0U || strlen(c3 + 1U) > 2U)
+  if (strlen(c3 + 1U) != 2U)
   {
     return -1;
   }
