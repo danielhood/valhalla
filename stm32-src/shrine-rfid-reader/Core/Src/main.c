@@ -54,10 +54,10 @@
 #endif
 
 #ifndef RC522_READER1_CS_PORT
-#define RC522_READER1_CS_PORT NULL
+#define RC522_READER1_CS_PORT GPIOA
 #endif
 #ifndef RC522_READER1_CS_PIN
-#define RC522_READER1_CS_PIN 0U
+#define RC522_READER1_CS_PIN GPIO_PIN_3
 #endif
 
 #ifndef RC522_READER2_CS_PORT
@@ -391,11 +391,31 @@ void getInfo(void)
   main_debug_print("mfrc522: min temperature is %0.1fC.\n", info.temperature_min);
 }
 
+// Reset is common to all boards, so needs to be done before the init for each board
+uint8_t resetMfrc522()
+{
+	main_debug_print("main: Reset mfrc522...\r\n");
+
+	// Hold reset low for 10ms
+	if (mfrc522_interface_reset_gpio_write(0) != 0)
+	{
+		main_debug_print("main: reset gpio write failed.\r\n");
+		return 1;
+	}
+	mfrc522_interface_delay_ms(10);
+	if (mfrc522_interface_reset_gpio_write(1) != 0)
+	{
+		main_debug_print("main: reset gpio write failed.\r\n");
+		return 1;
+	}
+
+	return 0;
+}
 
 uint8_t initMfrc522()
 {
   uint8_t addr = 0x00;
-  rc522_device_t *first;
+//  rc522_device_t *first;
 
   main_debug_print("main: Initializing mfrc522 as SPI...\r\n");
 
@@ -404,24 +424,36 @@ uint8_t initMfrc522()
   {
       return 1;
   }
-  first = rc522_find_first_present_device();
-  if (first == NULL)
-  {
-      main_debug_print("main: no RC522 readers configured (all CS ports NULL).\r\n");
-      return 1;
-  }
-  if (rc522_select(first) != 0)
-  {
-      main_debug_print("main: rc522_select(first) failed.\r\n");
-      return 1;
+
+  if (resetMfrc522() != 0) {
+	  return 1;
   }
 
-  /* basic int */
-  uint8_t res = mfrc522_basic_init(MFRC522_INTERFACE_SPI, addr, a_callback);
-  if (res != 0)
+  //for (int r = 0U; r < MFRC522_INTERFACE_MAX_DEVICES; r++)
+  for (int r = MFRC522_INTERFACE_MAX_DEVICES-1; r >= 0; r--)
   {
-      main_debug_print("main: mfrc522_basic_init failed.\r\n");
-      return 1;
+	rc522_device_t *dev = &s_rc522_devices[r];
+
+	if (dev->present == 0U)
+	{
+	  continue;
+	}
+
+	if (rc522_select(dev) != 0)
+	{
+		 main_debug_print("main: rc522_select(dev=%d) failed.\r\n", dev->index);
+		 return 1;
+	}
+
+	/* basic int */
+	uint8_t res = mfrc522_basic_init(MFRC522_INTERFACE_SPI, addr, a_callback);
+	if (res != 0)
+	{
+	  main_debug_print("main: mfrc522_basic_init(dev=%d) failed.\r\n", dev->index);
+	  return 1;
+	}
+
+	main_debug_print("Initialized mfrc522 device %d.\r\n", dev->index);
   }
 
   return 0;
@@ -684,7 +716,7 @@ uint8_t readID(void)
 
   main_debug_print("main: Full ID: ");
   main_debug_print_hex(fullId, sizeof(fullId));
-  main_debug_print_with_device_id(0, "\r\n\r\n\r\n");
+  main_debug_print_with_device_id(0, "\r\n");
 
   return 0;
 }

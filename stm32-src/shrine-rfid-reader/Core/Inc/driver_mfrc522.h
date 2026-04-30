@@ -45,7 +45,7 @@
 extern "C"{
 #endif
 
-#define NO_DEBUG
+//#define NO_DEBUG
 
 
 /**

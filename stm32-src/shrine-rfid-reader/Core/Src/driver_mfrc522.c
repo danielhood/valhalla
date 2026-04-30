@@ -512,21 +512,22 @@ uint8_t mfrc522_init(mfrc522_handle_t *handle)
         return 4;                                                            /* return error */
     }
 
-    if (handle->reset_gpio_write(0) != 0)                                    /* set 0 */
-    {
-        handle->debug_print("mfrc522: reset gpio write failed.\r\n");          /* reset gpio write failed */
-        res = 1;                                                             /* set the exit code */
-        
-        goto exit_code;                                                      /* goto the exit code */
-    }
-    handle->delay_ms(10);                                                    /* delay 10 ms */
-    if (handle->reset_gpio_write(1) != 0)                                    /* set 1 */
-    {
-        handle->debug_print("mfrc522: reset gpio write failed.\r\n");          /* reset gpio write failed */
-        res = 1;                                                             /* set the exit code */
-        
-        goto exit_code;                                                      /* goto the exit code */
-    }
+    // For mulit-readers, the reset gpio is common, so cannot be done during the individual init process
+//    if (handle->reset_gpio_write(0) != 0)                                    /* set 0 */
+//    {
+//        handle->debug_print("mfrc522: reset gpio write failed.\r\n");          /* reset gpio write failed */
+//        res = 1;                                                             /* set the exit code */
+//
+//        goto exit_code;                                                      /* goto the exit code */
+//    }
+//    handle->delay_ms(10);                                                    /* delay 10 ms */
+//    if (handle->reset_gpio_write(1) != 0)                                    /* set 1 */
+//    {
+//        handle->debug_print("mfrc522: reset gpio write failed.\r\n");          /* reset gpio write failed */
+//        res = 1;                                                             /* set the exit code */
+//
+//        goto exit_code;                                                      /* goto the exit code */
+//    }
 
     // Delay 50ms after reset for rs522 to stabilize
     handle->debug_print("mfrc522: 50ms delay after reset.\r\n");
@@ -584,13 +585,15 @@ uint8_t mfrc522_init(mfrc522_handle_t *handle)
         
         goto exit_code;                                                      /* goto the exit code */
     }
-    if (((id >> 4) & 0xF) != 9)                                              /* check the id */
-    {
-        handle->debug_print("mfrc522: check id failed.\r\n");                  /* check id failed */
-        res = 6;                                                             /* set the exit code */
-        
-        goto exit_code;                                                      /* goto the exit code */
-    }
+
+    // Ignoring the ID check as we need to work with an old or unknown version
+//    if (((id >> 4) & 0xF) != 9 && ((id >> 4) & 0xF) != 8)                                              /* check the id */
+//    {
+//        handle->debug_print("mfrc522: check id failed.\r\n");                  /* check id failed */
+//        res = 6;                                                             /* set the exit code */
+//
+//        goto exit_code;                                                      /* goto the exit code */
+//    }
     
     handle->inited = 1;                                                      /* flag inited */
     handle->irq_flag = 0x0000;                                               /* set 0x0000 */
