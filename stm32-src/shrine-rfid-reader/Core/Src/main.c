@@ -114,6 +114,8 @@ UART_HandleTypeDef huart2;
 char msg[MSG_MAX];
 static uint8_t s_rc522_log_reader = 0xFFU;
 static rc522_device_t s_rc522_devices[MFRC522_INTERFACE_MAX_DEVICES];
+/* Last Valhalla tag per reader index; cleared when that reader's scan fails. */
+static valhallaTag s_last_valhalla_tag_by_board[MFRC522_INTERFACE_MAX_DEVICES];
 
 /* USER CODE END PV */
 
@@ -1162,8 +1164,11 @@ uint8_t readNTAG(void)
   memset(&tag, 0, sizeof(tag));
   if (rc522_scan(dev, &tag) != 0)
   {
+    memset(&s_last_valhalla_tag_by_board[dev->index], 0, sizeof(valhallaTag));
     return 1;
   }
+
+  s_last_valhalla_tag_by_board[dev->index] = tag;
 
   main_debug_print("main: ValhallaTag => type='%c', camp=\"%s\", color=\"%s\", rune=\"%s\"",
                     tag.type, tag.camp, tag.color, tag.rune);
@@ -1259,8 +1264,11 @@ int main(void)
       if (rc522_scan(dev, &tag) != 0)
       {
         main_debug_print("main: loop: rc522_scan(reader=%u) failed.\r\n", dev->index);
+        memset(&s_last_valhalla_tag_by_board[dev->index], 0, sizeof(valhallaTag));
         continue;
       }
+
+      s_last_valhalla_tag_by_board[dev->index] = tag;
 
       main_debug_print("main: ValhallaTag => type='%c', camp=\"%s\", color=\"%s\", rune=\"%s\"",
                       tag.type, tag.camp, tag.color, tag.rune);
@@ -1269,6 +1277,32 @@ int main(void)
       (void)picc_halt();
     }
     rc522_log_reader_clear();
+
+    main_debug_print("main: last tag snapshot by board:\r\n");
+    for (r = 0U; r < MFRC522_INTERFACE_MAX_DEVICES; r++)
+    {
+      const valhallaTag *t;
+
+      if (s_rc522_devices[r].present == 0U)
+      {
+        continue;
+      }
+      t = &s_last_valhalla_tag_by_board[r];
+
+      if (t->type == 0)
+      {
+        main_debug_print("main: [R%u] no tag found\r\n", (unsigned int)r);
+      }
+      else {
+        main_debug_print(
+          "main: [R%u] type='%c', camp=\"%s\", color=\"%s\", rune=\"%s\"\r\n",
+          (unsigned int)r,
+          t->type,
+          t->camp,
+          t->color,
+          t->rune);
+      }
+    }
 
   }
   /* USER CODE END 3 */

@@ -75,3 +75,4 @@ Optional deeper refactor:
 - Only one reader should be selected/active at a time on shared SPI.
 - Registered CS pins are driven high on registration to keep readers deselected.
 - If no active reader is selected, SPI read/write return failure intentionally.
+- Note that reset GPIO is common for all boards; a single reset needs to be triggered before the boards are sequentially initialized.
