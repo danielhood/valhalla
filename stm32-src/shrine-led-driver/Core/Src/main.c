@@ -158,16 +158,16 @@ int main(void)
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, rgb[0][0]);
 
-	if (rgb[0][0] <= 0 && phase_dir[0][0] == -1) {
+	if (rgb[0][0] <= 10 && phase_dir[0][0] == -1) {
 		phase_dir[0][0] = 1;
 	}
 
 
-	if (rgb[0][0] >= 999 && phase_dir[0][0] == 1) {
+	if (rgb[0][0] >= 990 && phase_dir[0][0] == 1) {
 		phase_dir[0][0] = -1;
 	}
 
-	rgb[0][0] += phase_dir[0][0];
+	rgb[0][0] += phase_dir[0][0]*10;
 
 	HAL_Delay(50);
   }
@@ -239,7 +239,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 79;
+  htim1.Init.Prescaler = 19;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
