@@ -21,7 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +44,8 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -50,12 +54,50 @@ TIM_HandleTypeDef htim1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void main_debug_vprint(const char *const fmt, va_list args);
+
+
+void main_debug_print(const char *const fmt, ...)
+{
+  va_list args;
+
+  va_start(args, fmt);
+  main_debug_vprint(fmt, args);
+  va_end(args);
+}
+
+static void main_debug_vprint(const char *const fmt, va_list args)
+{
+#ifndef NO_DEBUG_MAIN
+    char str[256];
+    uint16_t len;
+
+    memset((char *)str, 0, sizeof(char) * 256);
+
+    (void)vsnprintf((char *)str, sizeof(str), (char const *)fmt, args);
+
+    len = (uint16_t)strlen((char *)str);
+
+    HAL_UART_Transmit(&huart2, (uint8_t*)str, len, HAL_MAX_DELAY);
+#endif
+
+}
+
+void main_debug_print_hex(const uint8_t *buf, uint16_t len)
+{
+    uint16_t i;
+    for (i = 0; i < len; i++)
+    {
+      main_debug_print("0x%02X ", buf[i]);
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -89,19 +131,40 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); // Red
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); // Green
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); // Blue
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  int rgb[2][3] = {{0,0,0},{0,0,0}};
+  int phase_dir[2][3] = {{1,1,1},{1,1,1}};
+  int loop = 0;
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	main_debug_print("Loop#%d\r\n", ++loop);
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-	HAL_Delay(500);
+
+
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, rgb[0][0]);
+
+	if (rgb[0][0] <= 0 || rgb[0][0] >= 999){
+		phase_dir[0][0] = -phase_dir[0][0];
+	}
+
+	rgb[0][0] += phase_dir[0][0];
+
+	HAL_Delay(50);
   }
   /* USER CODE END 3 */
 }
@@ -235,6 +298,41 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
 
 }
 
