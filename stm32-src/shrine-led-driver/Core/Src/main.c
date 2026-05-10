@@ -158,8 +158,13 @@ int main(void)
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, rgb[0][0]);
 
-	if (rgb[0][0] <= 0 || rgb[0][0] >= 999){
-		phase_dir[0][0] = -phase_dir[0][0];
+	if (rgb[0][0] <= 0 && phase_dir[0][0] == -1) {
+		phase_dir[0][0] = 1;
+	}
+
+
+	if (rgb[0][0] >= 999 && phase_dir[0][0] == 1) {
+		phase_dir[0][0] = -1;
 	}
 
 	rgb[0][0] += phase_dir[0][0];
