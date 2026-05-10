@@ -9,3 +9,6 @@ local.properties
 .settings/
 .loadpath
 .recommenders
+
+**/[Dd]ebug/
+**/[Rr]elease/
