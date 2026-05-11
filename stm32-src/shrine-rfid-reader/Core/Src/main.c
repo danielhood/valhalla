@@ -52,28 +52,28 @@
 #define RC522_READER0_CS_PORT GPIOA
 #endif
 #ifndef RC522_READER0_CS_PIN
-#define RC522_READER0_CS_PIN GPIO_PIN_4
+#define RC522_READER0_CS_PIN GPIO_PIN_3
 #endif
 
 #ifndef RC522_READER1_CS_PORT
 #define RC522_READER1_CS_PORT GPIOA
 #endif
 #ifndef RC522_READER1_CS_PIN
-#define RC522_READER1_CS_PIN GPIO_PIN_3
+#define RC522_READER1_CS_PIN GPIO_PIN_4
 #endif
 
 #ifndef RC522_READER2_CS_PORT
-#define RC522_READER2_CS_PORT NULL
+#define RC522_READER2_CS_PORT GPIOA
 #endif
 #ifndef RC522_READER2_CS_PIN
-#define RC522_READER2_CS_PIN 0U
+#define RC522_READER2_CS_PIN GPIO_PIN_11
 #endif
 
 #ifndef RC522_READER3_CS_PORT
-#define RC522_READER3_CS_PORT NULL
+#define RC522_READER3_CS_PORT GPIOA
 #endif
 #ifndef RC522_READER3_CS_PIN
-#define RC522_READER3_CS_PIN 0U
+#define RC522_READER3_CS_PIN GPIO_PIN_12
 #endif
 
 /* User TLV area (page 4+); MF READ returns 16 bytes (4 pages) per command */
@@ -1584,13 +1584,16 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_8, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_8|GPIO_PIN_11
+                          |GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA3 PA4 PA8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_8;
+  /*Configure GPIO pins : PA3 PA4 PA8 PA11
+                           PA12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_8|GPIO_PIN_11
+                          |GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

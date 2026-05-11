@@ -51,12 +51,16 @@ If payload does not meet this format, the scan is ignored.
 
 ### Reader chip select (CS)
 
-- Reader 0 (default): `PA4`
-- Additional optional reader CS outputs available by configuration:
-  - Reader 1: compile-time define `RC522_READER1_CS_PORT` / `RC522_READER1_CS_PIN`
-  - Reader 2: compile-time define `RC522_READER2_CS_PORT` / `RC522_READER2_CS_PIN`
-  - Reader 3: compile-time define `RC522_READER3_CS_PORT` / `RC522_READER3_CS_PIN`
-- `PA3` and `PA8` are configured as GPIO outputs in the current CubeMX pinout and can be used as CS lines if assigned.
+CS lines are ordinary **GPIO push-pull outputs** (`Core/Src/main.c`: `RC522_READER*_CS_PORT` / `RC522_READER*_CS_PIN`; only slots with **non-`NULL` port** are registered at startup).
+
+| Reader index | Default CS pin (current build) | Notes |
+|----------------|---------------------------------|--------|
+| **0** | **`PA3`** | `RC522_READER0_CS_*` → `GPIOA` / `GPIO_PIN_3`. |
+| **1** | **`PA4`** | `RC522_READER1_CS_*` → `GPIOA` / `GPIO_PIN_4`. |
+| **2** | **`PA11`** | `RC522_READER2_CS_*` → `GPIOA` / `GPIO_PIN_11`. |
+| **3** | **`PA12`** | `RC522_READER3_CS_*` → `GPIOA` / `GPIO_PIN_12`. |
+
+CubeMX (**`shrine-rfid-reader.ioc`**) drives **all four CS GPIOs** (`PA3`, `PA4`, `PA11`, `PA12`) as outputs; **`PA8`** remains a **spare** GPIO output on the same port (not wired to the MFRC522 slots in the current `main.c` defaults). Remap readers with **`RC522_READERn_CS_PORT`** / **`RC522_READERn_CS_PIN`** or set port **`NULL`** to leave a logical slot unused.
 
 ### I2C transmission of Valhalla tags (to shrine-led-driver)
 
@@ -90,7 +94,7 @@ Pinout on this MCU:
 ## Notes
 
 - SPI is shared; only one MFRC522 must be selected at a time.
-- Reader 0 defaults to `PA4` unless overridden by compile definitions.
+- Default CS pins are **`PA3` / `PA4` / `PA11` / `PA12`** (see table above); override with `RC522_READER*_CS_*` defines if wiring differs.
 - Multi-reader implementation details are tracked in `RC522_MULTI_READER_PLAN.md`.
 - I2C Valhalla snapshot format, clocking notes for the LED board, and verification checklist: `docs/I2C_VALHALLA_TAGS_I2C_TRANSMISSION_PLAN.md`.
 
