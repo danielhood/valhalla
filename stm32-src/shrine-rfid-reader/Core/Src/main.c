@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include "driver_mfrc522_basic.h"
 #include "driver_mfrc522_interface.h"
+#include "valhalla_tag.h"
+#include "valhalla_led_i2c.h"
 
 /* USER CODE END Includes */
 
@@ -79,14 +81,7 @@
 #define NTAG_TEXT_OUT_MAX        240U
 /* Last page address that can start a 4-page read (252..255) */
 #define NTAG_LAST_READ_START_PAGE 252U
-/* Valhalla scan result populated from NDEF content */
-typedef struct
-{
-  char type;         /* single character for object type, from CSV first field */
-  char camp[3];      /* up to 2 chars + NUL */
-  char color[3];     /* up to 2 chars + NUL */
-  char rune[3];      /* up to 2 chars + NUL */
-} valhallaTag;
+/* Valhalla scan result: typedef in valhalla_tag.h (must match LED I2C slave). */
 
 typedef struct
 {
@@ -1177,6 +1172,8 @@ uint8_t readNTAG(void)
                     tag.type, tag.camp, tag.color, tag.rune);
   main_debug_print_with_device_id(0, "\r\n\r\n\r\n");
 
+  valhalla_led_i2c_push_if_changed();
+
   return 0;
 }
 
@@ -1218,6 +1215,9 @@ int main(void)
 
   snprintf(msg, MSG_MAX, "Startup\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
+  valhalla_led_i2c_init(&hi2c1, (const uint8_t *)s_last_valhalla_tag_by_board,
+                        sizeof(s_last_valhalla_tag_by_board));
 
   getInfo();
 
@@ -1307,6 +1307,8 @@ int main(void)
           t->rune);
       }
     }
+
+    valhalla_led_i2c_push_if_changed();
 
   }
   /* USER CODE END 3 */
