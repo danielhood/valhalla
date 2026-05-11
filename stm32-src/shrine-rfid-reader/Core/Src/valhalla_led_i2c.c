@@ -68,8 +68,12 @@ void valhalla_led_i2c_push_if_changed(void)
                                (uint16_t)s_tag_blob_len, VALHALLA_LED_I2C_TIMEOUT_MS);
   if (st != HAL_OK)
   {
-    main_debug_print("valhalla_led_i2c: Master_Transmit failed (HAL=%d, err=0x%lx)\r\n", (int)st,
-                     (unsigned long)HAL_I2C_GetError(s_hi2c));
+    uint32_t e = HAL_I2C_GetError(s_hi2c);
+    main_debug_print(
+        "valhalla_led_i2c: Master_Transmit failed (HAL=%d, err=0x%lx; AF=%lu TO=%lu BERR=%lu)\r\n",
+        (int)st, (unsigned long)e, (unsigned long)((e & HAL_I2C_ERROR_AF) != 0U),
+        (unsigned long)((e & HAL_I2C_ERROR_TIMEOUT) != 0U),
+        (unsigned long)((e & HAL_I2C_ERROR_BERR) != 0U));
     return;
   }
 

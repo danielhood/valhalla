@@ -95,10 +95,28 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 
     /* USER CODE END I2C1_MspInit 0 */
 
+    /* MSI-only SYSCLK leaves HSI off; I2C1 needs HSI16 when using RCC_I2C1CLKSOURCE_HSI. */
+    if (__HAL_RCC_GET_FLAG(RCC_FLAG_HSIRDY) == RESET)
+    {
+      RCC_OscInitTypeDef oscInit = {0};
+      oscInit.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+      oscInit.HSIState            = RCC_HSI_ON;
+      oscInit.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+      if (HAL_RCC_OscConfig(&oscInit) != HAL_OK)
+      {
+        Error_Handler();
+      }
+    }
+
   /** Initializes the peripherals clock
   */
     PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2C1;
-    PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
+    /*
+     * System clock stays on 4 MHz MSI, but Cube I2C timing (0x00100D14) is tuned for a ~16 MHz
+     * I2C kernel clock. Use HSI16 as I2C1 clock so TIMINGR matches actual f_I2CCLK (fixes master
+     * timeouts / stuck SCL against shrine-rfid-reader).
+     */
+    PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
     {
       Error_Handler();
