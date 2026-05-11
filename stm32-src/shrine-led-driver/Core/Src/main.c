@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "valhalla_i2c_slave.h"
 #include "valhalla_rgb_strip.h"
+#include "status_pb3_led.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,7 +53,7 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+static uint32_t s_valhalla_i2c_rx_count_seen;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -156,6 +157,9 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2); // Green
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4); // Blue
 
+  status_pb3_led_init();
+  s_valhalla_i2c_rx_count_seen = valhalla_i2c_rx_complete_count();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -168,10 +172,23 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    valhalla_i2c_slave_poll_uart_log();
-    valhalla_rgb_strip_apply(valhalla_i2c_get_last_tags(), &htim1, &htim2, HAL_GetTick());
+    uint32_t n_rx;
+    uint32_t tick;
 
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+    valhalla_i2c_slave_poll_uart_log();
+
+    tick = HAL_GetTick();
+    n_rx = valhalla_i2c_rx_complete_count();
+    if (n_rx != s_valhalla_i2c_rx_count_seen)
+    {
+      s_valhalla_i2c_rx_count_seen = n_rx;
+      status_pb3_led_on_i2c_snapshot_if_valid(valhalla_i2c_get_last_tags());
+    }
+
+    valhalla_rgb_strip_apply(valhalla_i2c_get_last_tags(), &htim1, &htim2, tick);
+
+    status_pb3_led_poll(tick);
+
     HAL_Delay(50U);
   }
   /* USER CODE END 3 */

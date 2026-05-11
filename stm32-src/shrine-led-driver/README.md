@@ -44,6 +44,8 @@ If I2C1 were clocked from PCLK1 at 4 MHz with that timing word, the bus can **st
 | `Core/Src/valhalla_i2c_slave.c` | HAL listen mode, `HAL_I2C_AddrCallback` → `HAL_I2C_Slave_Seq_Receive_IT`, staging → stored snapshot |
 | `Core/Inc/valhalla_rgb_strip.h` | TIM1/TIM2 strip update from tags (`valhalla_rgb_strip_apply`) |
 | `Core/Src/valhalla_rgb_strip.c` | PWM mapping, colour decoding, dual-tag phasing |
+| `Core/Inc/status_pb3_led.h` | Nucleo user LED (**PB3**) heartbeat + I2C-received burst |
+| `Core/Src/status_pb3_led.c` | ~1.1 s heartbeat; ~500 ms rapid flash if snapshot has a well-formed tag |
 | `Core/Src/stm32l4xx_hal_msp.c` | I2C1 GPIO (**PB6/PB7**) + **HSI + I2C1 clock mux** |
 
 ### Reader counterpart
@@ -77,6 +79,10 @@ Wiring to **shrine-rfid-reader** (master uses **PA9/PA10** for I2C1):
 - **I2C1_SDA** → **PB7**
 
 Common ground required. Pull-ups on SCL/SDA (on one board or the bus).
+
+## Status LED (PB3)
+
+Mirrors **shrine-rfid-reader** behaviour in spirit: **~100 ms on** then **~1000 ms off** for a slow blink when idle, and — on each **completed** I2C blob when **at least one** `valhallaTag` looks like a successful reader parse (non-zero `type`, exactly two letters + NUL in `camp`, `color`, and `rune`) — a **~500 ms** window of **~40 ms** toggles serviced from `SysTick_Handler` (same timing constants as the reader’s scan-success LD3 burst). Heartbeat is suppressed while the burst owns the pin.
 
 ## GPIO (PWM strips)
 
