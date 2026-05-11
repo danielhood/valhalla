@@ -7,7 +7,8 @@ STM32 firmware for the Valhalla shrine RFID reader, built around MFRC522 over SP
 - **Valhalla tag parsing**: reads NTAG NDEF Text payload and parses `type,camp,color,rune`.
 - **Multiple reader support**: up to 4 MFRC522 readers on one SPI bus with independent CS lines.
 - **STM32 target**: generated from STM32CubeIDE project for `STM32L432KCUx` (`NUCLEO-L432KC` board setup).
-- **Established pin/peripheral config**: SPI1, USART2, GPIO, RCC, SYS, NVIC are configured and in use.
+- **Established pin/peripheral config**: SPI1, I2C1, USART2, GPIO, RCC, SYS, NVIC are configured and in use.
+- **I2C to LED board**: when the per-reader Valhalla tag snapshot changes, firmware pushes it to `shrine-led-driver` over I2C1 (see `docs/I2C_VALHALLA_TAGS_I2C_TRANSMISSION_PLAN.md`).
 
 
 ## Valhalla RFID Tag Format
@@ -36,6 +37,7 @@ If payload does not meet this format, the scan is ignored.
 - `SPI1` in master, full-duplex, 8-bit, soft NSS
   - Prescaler: `SPI_BAUDRATEPRESCALER_128` (configured ~250 Kbit/s)
 - `USART2` for debug/telemetry at `115200 8N1`
+- `I2C1` master → Valhalla tag snapshot to shrine-led-driver (slave address `0x10`)
 - `GPIO` for chip select lines and status LED
 - `RCC/SYS/NVIC` from Cube configuration
 
@@ -56,13 +58,14 @@ If payload does not meet this format, the scan is ignored.
   - Reader 3: compile-time define `RC522_READER3_CS_PORT` / `RC522_READER3_CS_PIN`
 - `PA3` and `PA8` are configured as GPIO outputs in the current CubeMX pinout and can be used as CS lines if assigned.
 
-### I2C Transmission of valhallaTag
+### I2C transmission of Valhalla tags (to shrine-led-driver)
 
-Upon change the valhallTag array will be transmitted over I2C to a shrine-led-driver controller.
+When `s_last_valhalla_tag_by_board[]` changes, the firmware sends the full snapshot (raw `valhallaTag` array, reader index order) in one I2C write to the LED MCU slave at **7-bit address `0x10`**. Implementation: `Core/Src/valhalla_led_i2c.c`, shared struct in `Core/Inc/valhalla_tag.h`. Protocol and wiring are documented in **`docs/I2C_VALHALLA_TAGS_I2C_TRANSMISSION_PLAN.md`** (pins on the LED side are **PB6/PB7**, not PA9/PA10).
 
-I2C configuration:
-- `PA9` -> `I2C1_SCL`
-- `PA10` -> `I2C1_SDA`
+Pinout on this MCU:
+
+- `PA9` → `I2C1_SCL`
+- `PA10` → `I2C1_SDA`
 
 ### Debug / status
 
@@ -89,3 +92,4 @@ I2C configuration:
 - SPI is shared; only one MFRC522 must be selected at a time.
 - Reader 0 defaults to `PA4` unless overridden by compile definitions.
 - Multi-reader implementation details are tracked in `RC522_MULTI_READER_PLAN.md`.
+- I2C Valhalla snapshot format, clocking notes for the LED board, and verification checklist: `docs/I2C_VALHALLA_TAGS_I2C_TRANSMISSION_PLAN.md`.
