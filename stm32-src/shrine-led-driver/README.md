@@ -42,8 +42,8 @@ If I2C1 were clocked from PCLK1 at 4 MHz with that timing word, the bus can **st
 | `Core/Inc/valhalla_tag.h` | `valhallaTag`, `SHRINE_LED_VALHALLA_TAG_MAX`, `VALHALLA_TAGS_I2C_PAYLOAD_BYTES` |
 | `Core/Inc/valhalla_i2c_slave.h` | Public init / accessor API |
 | `Core/Src/valhalla_i2c_slave.c` | HAL listen mode, `HAL_I2C_AddrCallback` → `HAL_I2C_Slave_Seq_Receive_IT`, staging → stored snapshot |
-| `Core/Inc/valhalla_rgb_strip.h` | TIM1/TIM2 strip update from tags (`valhalla_rgb_strip_apply`) |
-| `Core/Src/valhalla_rgb_strip.c` | PWM mapping, colour decoding, dual-tag phasing |
+| `Core/Inc/valhalla_rgb_strip.h` | Strip PWM API (`valhalla_rgb_strip_apply`, `bind_timers`, `systick_hook`) |
+| `Core/Src/valhalla_rgb_strip.c` | PWM mapping, fades, dual crossfade (stable RGB endpoint order), atomic tag snapshot |
 | `Core/Inc/status_pb3_led.h` | Nucleo user LED (**PB3**) heartbeat + I2C-received burst |
 | `Core/Src/status_pb3_led.c` | ~1.1 s heartbeat; ~500 ms rapid flash if snapshot has a well-formed tag |
 | `Core/Src/stm32l4xx_hal_msp.c` | I2C1 GPIO (**PB6/PB7**) + **HSI + I2C1 clock mux** |
@@ -57,7 +57,7 @@ If I2C1 were clocked from PCLK1 at 4 MHz with that timing word, the bus can **st
 1. **Init** (already called from `main.c` after `MX_I2C1_Init()`): `valhalla_i2c_slave_init(&hi2c1);`
 2. **Read snapshot**: `const valhallaTag *tags = valhalla_i2c_get_last_tags();` — array length `SHRINE_LED_VALHALLA_TAG_MAX`. Content is undefined until the first successful master write; after that it holds the last **complete** transfer.
 3. **Detect new data** (optional): `valhalla_i2c_rx_complete_count()` increments once per completed full payload (useful for logging or waking pattern logic).
-4. **RGB strips** (see **`Core/Inc/valhalla_rgb_strip.h`**): main loop calls `valhalla_rgb_strip_apply(tags, &htim1, &htim2, HAL_GetTick())`, which refreshes PWM from tag **colour** codes (see below). Tag index **0** and **2** drive **TIM1**; **1** and **3** drive **TIM2**. If neither mapped tag yields a recognised colour on a strip, that strip stays **off**. With **both** mapped tags carrying valid colours on the same strip, the firmware alternates colours every **10 s**.
+4. **RGB strips** (see **`Core/Inc/valhalla_rgb_strip.h`**): after init, `valhalla_rgb_strip_bind_timers(&htim1, &htim2)` is called from `main.c`; **`valhalla_rgb_strip_systick_hook()`** runs from **`SysTick_Handler`** each **1 ms** so dual crossfades and fades advance smoothly (avoiding coarse ~20 Hz updates from the main loop alone). You can still call `valhalla_rgb_strip_apply(tags, &htim1, &htim2, HAL_GetTick())` from the main loop if you prefer not to use the hook. Each apply copies the tag blob **with interrupts briefly masked** so an I2C completion `memcpy` cannot tear a half-updated snapshot. For two colours on one strip, blend endpoints are **sorted by RGB** so transient slot/order differences do not flip which colour is mixed in on successive frames. Tag index **0** and **2** drive **TIM1**; **1** and **3** drive **TIM2**. Steady-target changes **crossfade** over **`VALHALLA_RGB_STRIP_FADE_MS`** (default **10 s**); dual-tag A↔B uses **`VALHALLA_RGB_STRIP_DUAL_TRANSITION_MS`** **10 s** per leg (**20 s** full A→B→A cycle). Overrides: `-DVALHALLA_RGB_STRIP_DUAL_TRANSITION_MS=…`, `-DVALHALLA_RGB_STRIP_FADE_MS=…`.
 
 #### Supported colour codes (tag `color` field, two-letter)
 

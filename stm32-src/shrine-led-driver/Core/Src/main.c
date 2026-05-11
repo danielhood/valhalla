@@ -160,6 +160,8 @@ int main(void)
   status_pb3_led_init();
   s_valhalla_i2c_rx_count_seen = valhalla_i2c_rx_complete_count();
 
+  valhalla_rgb_strip_bind_timers(&htim1, &htim2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -184,8 +186,6 @@ int main(void)
       s_valhalla_i2c_rx_count_seen = n_rx;
       status_pb3_led_on_i2c_snapshot_if_valid(valhalla_i2c_get_last_tags());
     }
-
-    valhalla_rgb_strip_apply(valhalla_i2c_get_last_tags(), &htim1, &htim2, tick);
 
     status_pb3_led_poll(tick);
 

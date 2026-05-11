@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "status_pb3_led.h"
+#include "valhalla_rgb_strip.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -189,6 +190,7 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
   status_pb3_led_systick_hook();
+  valhalla_rgb_strip_systick_hook();
   /* USER CODE END SysTick_IRQn 1 */
 }
 
