@@ -42,6 +42,8 @@ If I2C1 were clocked from PCLK1 at 4 MHz with that timing word, the bus can **st
 | `Core/Inc/valhalla_tag.h` | `valhallaTag`, `SHRINE_LED_VALHALLA_TAG_MAX`, `VALHALLA_TAGS_I2C_PAYLOAD_BYTES` |
 | `Core/Inc/valhalla_i2c_slave.h` | Public init / accessor API |
 | `Core/Src/valhalla_i2c_slave.c` | HAL listen mode, `HAL_I2C_AddrCallback` → `HAL_I2C_Slave_Seq_Receive_IT`, staging → stored snapshot |
+| `Core/Inc/valhalla_rgb_strip.h` | TIM1/TIM2 strip update from tags (`valhalla_rgb_strip_apply`) |
+| `Core/Src/valhalla_rgb_strip.c` | PWM mapping, colour decoding, dual-tag phasing |
 | `Core/Src/stm32l4xx_hal_msp.c` | I2C1 GPIO (**PB6/PB7**) + **HSI + I2C1 clock mux** |
 
 ### Reader counterpart
@@ -53,6 +55,19 @@ If I2C1 were clocked from PCLK1 at 4 MHz with that timing word, the bus can **st
 1. **Init** (already called from `main.c` after `MX_I2C1_Init()`): `valhalla_i2c_slave_init(&hi2c1);`
 2. **Read snapshot**: `const valhallaTag *tags = valhalla_i2c_get_last_tags();` — array length `SHRINE_LED_VALHALLA_TAG_MAX`. Content is undefined until the first successful master write; after that it holds the last **complete** transfer.
 3. **Detect new data** (optional): `valhalla_i2c_rx_complete_count()` increments once per completed full payload (useful for logging or waking pattern logic).
+4. **RGB strips** (see **`Core/Inc/valhalla_rgb_strip.h`**): main loop calls `valhalla_rgb_strip_apply(tags, &htim1, &htim2, HAL_GetTick())`, which refreshes PWM from tag **colour** codes (see below). Tag index **0** and **2** drive **TIM1**; **1** and **3** drive **TIM2**. If neither mapped tag yields a recognised colour on a strip, that strip stays **off**. With **both** mapped tags carrying valid colours on the same strip, the firmware alternates colours every **10 s**.
+
+#### Supported colour codes (tag `color` field, two-letter)
+
+| Colour   | Code |
+|----------|------|
+| Red      | RD   |
+| Deep red | DR   |
+| Orange   | OR   |
+| Yellow   | YL   |
+| Green    | GN   |
+| Purple   | PR   |
+| Blue     | BL   |
 
 ### Electrical / pins (I2C1)
 
@@ -74,3 +89,7 @@ TIM2_CH2 → PA1 (Strip 2 - Green)
 TIM2_CH4 → PA3 (Strip 2 - Blue)  
 
 TIM2_CH3 (PA2) is reserved for USART2 serial debug, hence TIM2_CH4 for the third strip channel.
+
+### PWM vs LED brightness
+
+Firmware sets each channel’s timer **compare** proportional to the desired RGB byte (0 → off, full scale at `Period` → maximum brightness). With Cube’s PWM1 and normal active-high polarity, **higher duty cycle means a brighter** LED channel on the strip.

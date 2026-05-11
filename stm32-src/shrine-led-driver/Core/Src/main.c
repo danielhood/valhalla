@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "valhalla_i2c_slave.h"
+#include "valhalla_rgb_strip.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -142,6 +143,8 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  main_debug_print("Initializing...\r\n");
+
   valhalla_i2c_slave_init(&hi2c1);
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); // Red
@@ -158,41 +161,18 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  int rgb[2][3] = {{0,0,0},{0,0,0}};
-  int phase_dir[2][3] = {{1,1,1},{1,1,1}};
-  int loop = 0;
+  main_debug_print("Starting loop.\r\n");
 
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	valhalla_i2c_slave_poll_uart_log();
-	main_debug_print("Loop#%d\r\n", ++loop);
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+    valhalla_i2c_slave_poll_uart_log();
+    valhalla_rgb_strip_apply(valhalla_i2c_get_last_tags(), &htim1, &htim2, HAL_GetTick());
 
-
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, rgb[0][0]);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, rgb[0][0]);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, rgb[0][0]);
-
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, rgb[0][0]);
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, rgb[0][0]);
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, rgb[0][0]);
-
-
-	if (rgb[0][0] <= 10 && phase_dir[0][0] == -1) {
-		phase_dir[0][0] = 1;
-	}
-
-
-	if (rgb[0][0] >= 990 && phase_dir[0][0] == 1) {
-		phase_dir[0][0] = -1;
-	}
-
-	rgb[0][0] += phase_dir[0][0]*10;
-
-	HAL_Delay(50);
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+    HAL_Delay(50U);
   }
   /* USER CODE END 3 */
 }
