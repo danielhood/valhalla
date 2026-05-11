@@ -56,6 +56,14 @@ If payload does not meet this format, the scan is ignored.
   - Reader 3: compile-time define `RC522_READER3_CS_PORT` / `RC522_READER3_CS_PIN`
 - `PA3` and `PA8` are configured as GPIO outputs in the current CubeMX pinout and can be used as CS lines if assigned.
 
+### I2C Transmission of valhallaTag
+
+Upon change the valhallTag array will be transmitted over I2C to a shrine-led-driver controller.
+
+I2C configuration:
+- `PA9` -> `I2C1_SCL`
+- `PA10` -> `I2C1_SDA`
+
 ### Debug / status
 
 - `PA2` -> `USART2_TX` (VCP TX)
