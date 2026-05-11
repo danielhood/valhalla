@@ -2,6 +2,10 @@
 #include "main.h"
 #include "valhalla_i2c_slave.h"
 
+#ifndef NO_DEBUG_MAIN
+static uint32_t s_uart_log_last_rx_count;
+#endif
+
 static I2C_HandleTypeDef *s_hi2c;
 
 /** Mirrors shrine-rfid-reader `static valhallaTag s_last_valhalla_tag_by_board[MFRC522_INTERFACE_MAX_DEVICES]`. */
@@ -29,6 +33,33 @@ const valhallaTag *valhalla_i2c_get_last_tags(void)
 uint32_t valhalla_i2c_rx_complete_count(void)
 {
   return s_rx_cmpl_count;
+}
+
+void valhalla_i2c_slave_poll_uart_log(void)
+{
+#ifndef NO_DEBUG_MAIN
+  uint32_t n;
+  uint32_t i;
+
+  n = s_rx_cmpl_count;
+  if (n == s_uart_log_last_rx_count)
+  {
+    return;
+  }
+  s_uart_log_last_rx_count = n;
+
+  main_debug_print("USART2: I2C ValhallaTag snapshot #%lu (%u bytes)\r\n",
+                   (unsigned long)n, (unsigned)VALHALLA_TAGS_I2C_PAYLOAD_BYTES);
+
+  for (i = 0U; i < (uint32_t)SHRINE_LED_VALHALLA_TAG_MAX; i++)
+  {
+    const valhallaTag *t = &s_last_valhalla_tag_by_board[i];
+    char type_c = (t->type != '\0') ? t->type : '?';
+
+    main_debug_print("  [%lu] type=%c camp=\"%s\" color=\"%s\" rune=\"%s\"\r\n",
+                     (unsigned long)i, type_c, t->camp, t->color, t->rune);
+  }
+#endif
 }
 
 void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection,

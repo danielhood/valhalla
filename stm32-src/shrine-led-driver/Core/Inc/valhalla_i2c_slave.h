@@ -21,6 +21,12 @@ const valhallaTag *valhalla_i2c_get_last_tags(void);
 /** Increments once per HAL_I2C_SlaveRxCpltCallback (full payload received). */
 uint32_t valhalla_i2c_rx_complete_count(void);
 
+/**
+ * Emit USART2 debug lines when a new I2C payload has been received.
+ * Call periodically from the main loop (not from ISR): uses blocking UART transmit.
+ */
+void valhalla_i2c_slave_poll_uart_log(void);
+
 #ifdef __cplusplus
 }
 #endif

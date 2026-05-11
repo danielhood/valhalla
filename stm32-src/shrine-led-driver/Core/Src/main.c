@@ -167,6 +167,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	valhalla_i2c_slave_poll_uart_log();
 	main_debug_print("Loop#%d\r\n", ++loop);
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
 
