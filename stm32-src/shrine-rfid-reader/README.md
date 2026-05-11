@@ -93,3 +93,12 @@ Pinout on this MCU:
 - Reader 0 defaults to `PA4` unless overridden by compile definitions.
 - Multi-reader implementation details are tracked in `RC522_MULTI_READER_PLAN.md`.
 - I2C Valhalla snapshot format, clocking notes for the LED board, and verification checklist: `docs/I2C_VALHALLA_TAGS_I2C_TRANSMISSION_PLAN.md`.
+
+### USART2 debug and USB power-only (NUCLEO-L432KC)
+
+USART2 TX/RX (`PA2` / `PA15`) is routed through the onboard **ST-Link** virtual COM port. Debug output uses **`HAL_UART_Transmit` with a bounded timeout** (`MAIN_DEBUG_UART_TX_TIMEOUT_MS` in `Core/Inc/driver_mfrc522_interface.h`, default **150 ms** per call) plus abort on failure, so firmware does **not** wait forever on COM. That avoids the common failure mode where heavy serial logging interacts badly with USB **charger-only** (no enumerated host) and starves **`valhalla_led_i2c_push_if_changed()`**.
+
+If I2C or other peripherals still behave differently **with a PC vs USB wall wart**, also verify:
+
+- **Common ground** between the Nucleo, MFRC522 board(s), and the LED MCU (especially when the laptop provides the only return path for GND).
+- **3.3 V / 5 V** headroom on the same supply; brownouts can show up on one bus first.

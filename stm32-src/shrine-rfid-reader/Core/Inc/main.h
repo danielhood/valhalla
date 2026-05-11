@@ -54,6 +54,9 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+void ScanSuccessLd3Pulse_SysTickHook(void);
+uint8_t ScanSuccessLd3Pulse_IsActive(void);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

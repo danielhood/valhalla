@@ -476,7 +476,10 @@ void mfrc522_interface_debug_print(const char *const fmt, ...)
 
     len = strlen((char *)str);
 
-    HAL_UART_Transmit(&huart2, (uint8_t*)str, len, HAL_MAX_DELAY);
+    if (HAL_UART_Transmit(&huart2, (uint8_t *)str, len, MAIN_DEBUG_UART_TX_TIMEOUT_MS) != HAL_OK)
+    {
+      (void)HAL_UART_AbortTransmit(&huart2);
+    }
 #endif
 
 }

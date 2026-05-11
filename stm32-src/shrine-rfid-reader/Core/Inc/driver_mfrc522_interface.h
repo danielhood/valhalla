@@ -48,6 +48,12 @@ extern "C"{
 
 #define MFRC522_INTERFACE_MAX_DEVICES 4U
 
+/* Bound USART2 TX (ST-Link virtual COM): avoid HAL_MAX_DELAY so debug prints cannot wedge the MCU
+ * when USB is charger-only / no host enumerates — I2C and RFID SPI must stay schedulable. */
+#ifndef MAIN_DEBUG_UART_TX_TIMEOUT_MS
+#define MAIN_DEBUG_UART_TX_TIMEOUT_MS 150U
+#endif
+
 
 /**
  * @defgroup mfrc522_interface_driver mfrc522 interface driver function

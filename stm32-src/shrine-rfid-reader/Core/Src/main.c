@@ -139,6 +139,7 @@ static uint8_t rc522_select(rc522_device_t *dev);
 static void rc522_log_reader_clear(void);
 static uint8_t rc522_scan(rc522_device_t *dev, valhallaTag *out_tag);
 static uint8_t scanValhallaTag(valhallaTag *out_tag);
+static void scan_success_ld3_pulse_trigger(void);
 static void main_debug_vprint_with_device_id(int showDeviceId, const char *const fmt, va_list args);
 
 void main_debug_print(const char *const fmt, ...)
@@ -184,7 +185,10 @@ static void main_debug_vprint_with_device_id(int showDeviceId, const char *const
 
     len = (uint16_t)strlen((char *)str);
 
-    HAL_UART_Transmit(&huart2, (uint8_t*)str, len, HAL_MAX_DELAY);
+    if (HAL_UART_Transmit(&huart2, (uint8_t *)str, len, MAIN_DEBUG_UART_TX_TIMEOUT_MS) != HAL_OK)
+    {
+      (void)HAL_UART_AbortTransmit(&huart2);
+    }
 #endif
 
 }
@@ -1147,6 +1151,52 @@ static uint8_t scanValhallaTag(valhallaTag *out_tag)
   return 0;
 }
 
+#define SCAN_SUCCESS_LD3_PULSE_DURATION_MS    500U
+#define SCAN_SUCCESS_LD3_PULSE_TOGGLE_MS    40U
+
+static volatile uint32_t s_ld3_scan_pulse_deadline_tick;
+static volatile uint32_t s_ld3_scan_pulse_next_toggle_tick;
+
+uint8_t ScanSuccessLd3Pulse_IsActive(void)
+{
+  return (s_ld3_scan_pulse_deadline_tick != 0U) ? 1U : 0U;
+}
+
+void ScanSuccessLd3Pulse_SysTickHook(void)
+{
+  uint32_t deadline;
+  uint32_t now;
+
+  deadline = s_ld3_scan_pulse_deadline_tick;
+  if (deadline == 0U)
+  {
+    return;
+  }
+
+  now = HAL_GetTick();
+  if ((int32_t)(now - deadline) >= 0)
+  {
+    s_ld3_scan_pulse_deadline_tick      = 0U;
+    s_ld3_scan_pulse_next_toggle_tick   = 0U;
+    HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+    return;
+  }
+
+  if ((int32_t)(now - s_ld3_scan_pulse_next_toggle_tick) >= 0)
+  {
+    HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    s_ld3_scan_pulse_next_toggle_tick = now + SCAN_SUCCESS_LD3_PULSE_TOGGLE_MS;
+  }
+}
+
+static void scan_success_ld3_pulse_trigger(void)
+{
+  uint32_t n = HAL_GetTick();
+
+  s_ld3_scan_pulse_deadline_tick    = n + SCAN_SUCCESS_LD3_PULSE_DURATION_MS;
+  s_ld3_scan_pulse_next_toggle_tick = n;
+}
+
 uint8_t readNTAG(void)
 {
   rc522_device_t *dev;
@@ -1173,6 +1223,8 @@ uint8_t readNTAG(void)
   main_debug_print_with_device_id(0, "\r\n\r\n\r\n");
 
   valhalla_led_i2c_push_if_changed();
+
+  scan_success_ld3_pulse_trigger();
 
   return 0;
 }
@@ -1214,7 +1266,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   snprintf(msg, MSG_MAX, "Startup\r\n");
-  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+  if (HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), MAIN_DEBUG_UART_TX_TIMEOUT_MS) != HAL_OK)
+  {
+    (void)HAL_UART_AbortTransmit(&huart2);
+  }
 
   valhalla_led_i2c_init(&hi2c1, (const uint8_t *)s_last_valhalla_tag_by_board,
                         sizeof(s_last_valhalla_tag_by_board));
@@ -1237,14 +1292,22 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     uint8_t r;
+    uint8_t any_reader_scan_ok = 0U;
 
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+    /* LD3 heartbeat — skip toggles while scan-success ISR pulse owns the pin (~500 ms). */
+    if (ScanSuccessLd3Pulse_IsActive() == 0U)
+    {
+      HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+      HAL_Delay(100);
+      HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    }
     HAL_Delay(1000);
 
     snprintf(msg, MSG_MAX, "\r\nLoop: %d\r\n", ++i);
-    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+    if (HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), MAIN_DEBUG_UART_TX_TIMEOUT_MS) != HAL_OK)
+    {
+      (void)HAL_UART_AbortTransmit(&huart2);
+    }
 
 //    getVersion();
 
@@ -1273,6 +1336,7 @@ int main(void)
       }
 
       s_last_valhalla_tag_by_board[dev->index] = tag;
+      any_reader_scan_ok = 1U;
 
       main_debug_print("main: ValhallaTag => type='%c', camp=\"%s\", color=\"%s\", rune=\"%s\"",
                       tag.type, tag.camp, tag.color, tag.rune);
@@ -1309,6 +1373,11 @@ int main(void)
     }
 
     valhalla_led_i2c_push_if_changed();
+
+    if (any_reader_scan_ok != 0U)
+    {
+      scan_success_ld3_pulse_trigger();
+    }
 
   }
   /* USER CODE END 3 */
