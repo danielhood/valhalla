@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "valhalla_i2c_slave.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -140,6 +141,8 @@ int main(void)
   MX_TIM2_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+
+  valhalla_i2c_slave_init(&hi2c1);
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); // Red
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); // Green
